@@ -1,5 +1,5 @@
 /**********************
-* Class:  CSC-415-02 Summer 2024
+* Class:  CSC-415-01 Summer 2024
 * Name: Yuvraj Gupta
 * Student ID: 922933190
 * GitHub Name: YuvrajGupta1808
@@ -19,21 +19,34 @@
 
 int main(int argc, char *argv[])
 {
+    //Check if the user provides the correct number of command line arguments includes
+    //firstname, lastname and message.
     if (argc < 4)
     {
         fprintf(stderr, "Usage: %s <FirstName> <LastName> <Message>\n", argv[0]);
         return 1;
     }
 
-    // Step 4: Allocate and populate the personalInfo structure
-    personalInfo *pInfo = (personalInfo *)malloc(sizeof(personalInfo));
+
+    // Step 4 STARTS
+
+    /*
+    Allocate memory for the personalInfo structure to store user details.
+    Dynamic allocation allows for flexible memory usage, but we need to ensure we free 
+    this memory later to prevent leaks.
+    */
+    struct personalInfo *pInfo = (personalInfo *)malloc(sizeof(struct personalInfo));
     if (!pInfo)
     {
         perror("Failed to allocate memory for personalInfo");
         return 1;
     }
 
-    // Allocate and copy first name
+    /*
+    Allocate memory for the first, last name and copy the command-line argument 
+    into the allocated space.
+    The Dynamic allocation ensures the exact amount of memory needed is used.
+    */
     pInfo->firstName = (char *)malloc(strlen(argv[1]) + 1);
     if (!pInfo->firstName)
     {
@@ -43,7 +56,6 @@ int main(int argc, char *argv[])
     }
     strcpy(pInfo->firstName, argv[1]);
 
-    // Allocate and copy last name
     pInfo->lastName = (char *)malloc(strlen(argv[2]) + 1);
     if (!pInfo->lastName)
     {
@@ -54,17 +66,22 @@ int main(int argc, char *argv[])
     }
     strcpy(pInfo->lastName, argv[2]);
 
-    // Set student ID and level
-    pInfo->studentID = 922933190; // Replace with your actual student ID
-    pInfo->level = JUNIOR;        // Set appropriately
+    pInfo->studentID = 922933190; 
+    pInfo->level = JUNIOR;        
 
-    // Set languages field (update this to include all languages you know)
+    // This method allows multiple values in a single field.
     pInfo->languages = KNOWLEDGE_OF_C | KNOWLEDGE_OF_JAVA | KNOWLEDGE_OF_PYTHON;
 
-    // Copy the message
+    // Copy the user-provided message into the structure, ensuring it fits within the allocated space.
     strncpy(pInfo->message, argv[3], sizeof(pInfo->message) - 1);
 
-    // Step 5: Write personal information
+
+    // Step 5: STARTS
+
+    /*
+    To write the personalInfo data using the provided function and check for success.
+    Proper error handling ensures that we can identify and respond to issues during execution.
+    */
     if (writePersonalInfo(pInfo) != 0)
     {
         fprintf(stderr, "Failed to write personal info\n");
@@ -74,54 +91,76 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Step 6: Buffer data into blocks
-char *block = (char *)malloc(BLOCK_SIZE);
-if (!block)
-{
-    perror("Failed to allocate block");
-    free(pInfo->firstName);
-    free(pInfo->lastName);
-    free(pInfo);
-    return 1;
-}
 
-const char *data;
-size_t offset = 0;
+    // Step 6 STARTS
 
-while ((data = getNext()) != NULL)
-{
-    size_t len = strlen(data);
-    size_t space_left = BLOCK_SIZE - offset;
-
-    if (len > space_left)
+    /*
+    Allocate a buffer to hold strings temporarily as they are read from an input source.
+    Using a fixed buffer size helps manage memory efficiently and simplifies the logic
+    for processing data in blocks.
+    */
+    char *block = (char *)malloc(BLOCK_SIZE);
+    if (!block)
     {
-        // Partial copy and commit the block
-        memcpy(block + offset, data, space_left);
-        commitBlock(block);
-        offset = 0;
+        perror("Failed to allocate block");
+        free(pInfo->firstName);
+        free(pInfo->lastName);
+        free(pInfo);
+        return 1;
+    }
+ 
+    const char *data;
+    // Initialize offset variable that keep track of current position in buffer. 
+    size_t offset = 0; 
 
-        // Handle remaining part of the data
-        data += space_left;
-        len -= space_left;
+    /*
+    Continuously read strings using the getNext function until no more strings are available.
+    This loop ensures that we process all input strings, committing the buffer whenever it 
+    becomes full.
+    */
+    while ((data = getNext()) != NULL)
+    {
+        size_t len = strlen(data);
+        size_t space_left = BLOCK_SIZE - offset;
+
+        // Check if the data length exceeds the remaining space in the block
+        if (len > space_left)
+        {
+            /*
+            If the data does not fit, copy only the part that fits into the block
+            Commit the filled block to process it
+            Adjust the data pointer and length to handle the remaining data
+            */
+            memcpy(block + offset, data, space_left);
+            commitBlock(block);
+            offset = 0;
+
+            data += space_left;
+            len -= space_left;
+        }
+
+        // Copy any remaining data into the block
+        // This happens either if the entire data fits initially or after the partial copy
+        memcpy(block + offset, data, len);
+        offset += len;
     }
 
-    // Copy remaining data into the buffer
-    memcpy(block + offset, data, len);
-    offset += len;
+    // Commit any remaining data in the block so that no data is lost.
+    if (offset > 0)
+    {
+        commitBlock(block);
+    }
+    // Free the buffer memory to prevent leaks.
+    free(block);
 
-}
 
-// Commit any remaining data in the block
-if (offset > 0)
-{
-    commitBlock(block);
-}
-
-free(block);
-    // Step 7: Call checkIt and exit
+    // Step 7 STARTS
+    // Perform a final check using the provided function and return its result as the program's exit status.
     int check_result = checkIt();
     printf("Check result: %d\n", check_result); // Debug output
-        free(pInfo->firstName);
+
+    // Free the dynamically allocated memory for the personalInfo structure to prevent memory leaks.
+    free(pInfo->firstName);
     free(pInfo->lastName);
     free(pInfo);
     return check_result;
